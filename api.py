@@ -72,11 +72,13 @@ class Compiler(joblib.worker.Worker):
             return
         logging.debug("%s: compiling '%s' from '%s'",
                       jobid, object_id, table)
-        tasks = []
         for query in self._queries[table]:
-            tasks.append(asyncio.ensure_future(
-                self._con.execute(query, object_id)))
-        await asyncio.gather(*tasks)
+            try:
+                await self._con.execute(query, object_id)
+            except asyncpg.exceptions.DeadlockDetectedError:
+                logging.error("%s: deadlocked!", jobid)
+                raise joblib.worker.JobFailed("deadlock",
+                                              True)  # critical
 
 
 async def startup():
