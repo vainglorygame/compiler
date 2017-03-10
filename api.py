@@ -82,7 +82,7 @@ class Compiler(joblib.worker.Worker):
 
 
 async def startup():
-    for _ in range(3):
+    for _ in range(1):
         worker = Compiler()
         await worker.connect(db_config, queue_db)
         await worker.setup()
