@@ -47,10 +47,11 @@ class Compiler(joblib.worker.Worker):
             # directory names: web target table
             table = os.path.basename(os.path.dirname(path))
             with open(path, "r", encoding="utf-8-sig") as file:
+                qry = await self._con.prepare(file.read())
                 try:
-                    self._queries[table].append(file.read())
+                    self._queries[table].append(qry)
                 except KeyError:
-                    self._queries[table] = [file.read()]
+                    self._queries[table] = [qry]
                 logging.info("loaded query '%s'", table)
 
 
@@ -74,7 +75,7 @@ class Compiler(joblib.worker.Worker):
                       jobid, object_id, table)
         for query in self._queries[table]:
             try:
-                await self._con.execute(query, object_id)
+                await query.fetch(object_id)
             except asyncpg.exceptions.DeadlockDetectedError:
                 logging.error("%s: deadlocked!", jobid)
                 raise joblib.worker.JobFailed("deadlock",
